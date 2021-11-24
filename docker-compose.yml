@@ -1,0 +1,74 @@
+version: "3.9"
+services:
+  rabbitmq:
+    image: rabbitmq:3.9.8-alpine
+    restart: always
+    ports:
+      - 5672:5672
+    networks:
+      - sender
+      - recipient
+  prometheus:
+    image: prom/prometheus:v2.31.0
+    volumes:
+      - ./prometheus:/etc/prometheus/
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    restart: always
+    networks:
+      - sender
+      - recipient
+  grafana:
+    image: grafana/grafana:5.1.0
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - sender
+      - recipient
+    depends_on:
+      - prometheus
+  micro-sender:
+    depends_on:
+      - rabbitmq
+    image: iliaisakhin/micro-sender:1.0-SNAPSHOT
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+    ports:
+      - "8080:8080"
+    networks:
+      - sender
+#   micro-recipient:
+#     depends_on:
+#       - rabbitmq
+#     image: iliaisakhin/micro-recipient:1.0-SNAPSHOT
+#     environment:
+#       SPRING_RABBITMQ_HOST: rabbitmq
+#     ports:
+#       - "8081:8080"
+#     networks:
+#       - recipient
+#     networks:
+#       - sender
+#       - recipient
+#   micro-collector:
+#     depends_on:
+#       - rabbitmq
+#     image: iliaisakhin/micro-collector:1.0-SNAPSHOT
+#     environment: 
+#       FEIGN_RECIPIENT_HOST: micro-recipient
+#       FEIGN_RECIPIENT_PORT: 8081
+#     ports:
+#       - "8082:8080"
+#     networks:
+#       - recipient
+
+networks:
+  sender:
+  recipient:
